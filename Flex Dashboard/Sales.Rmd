@@ -1,0 +1,375 @@
+---
+title: "Sales Dashboard"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: rows
+    vertical_layout: fill
+    social: ["twitter", "facebook", "linkedin", "menu"]
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(knitr)
+library(DT)
+library(rpivotTable)
+library(ggplot2)
+library(plotly)
+library(tidyverse)
+library(openintro)
+library(highcharter)
+library(tibble)
+library(ggvis)
+
+```
+
+```{r}
+sales_data <- read.csv("D:/Data Analytics/supermarket dataset/Super-Store-.csv")
+
+
+```
+
+```{r}
+mycolors <- c("blue", "#FFC125", "darkgreen", "darkorange")
+```
+
+Revenue Analysis
+=====================================
+
+Row
+--------------------------------------
+
+### Total Customer
+
+```{r}
+valueBox(paste("Sales Analysis"),
+         color = "success")
+
+```
+
+### Total Manager
+
+```{r}
+valueBox(length(sales_data$State == "California"),
+         icon = "fa-building")
+```
+
+### Totla Sales
+```{r}
+gauge(round(sum(sales_data$Sales),
+            digits = 2),    
+            min = 0,
+            max = 350,
+            gaugeSectors(success = c(0, 150),
+                         warning = c(150, 240),
+                         danger = c(240, 350),
+           colors =c('green', 'yellow', 'red')))
+
+```
+
+### sales in Florida
+
+```{r}
+valueBox(sum(sales_data$Ship.Mode == "Second Class"),
+         icon = "fa-building")
+```
+
+### Sales in North Carolina
+```{r}
+valueBox(sum(sales_data$Segment == "Consumer"),
+         icon = "fa-building")
+```
+  
+
+Row
+----------------------------------------------------
+### plot
+
+```{r}
+seg1 <- sales_data %>% 
+ group_by(Segment) %>% 
+  summarise(count = n()) %>% 
+  plot_ly(x = ~Segment,
+          y= ~count,
+          color = rainbow(3),
+          type = 'bar') %>% 
+          layout(xaxis = list(title= "Customer Plot"),
+                 yaxis = list(title ='Count'))
+seg1
+
+```
+
+
+### Count Shipping Mode
+```{r}
+line <- sales_data %>% 
+  group_by(Ship.Mode) %>% 
+  summarise(ship = n()) %>% 
+   plot_ly(x = ~Ship.Mode,
+          y= ~ship,
+          color = rainbow(4),
+          type = 'bar') %>% 
+          layout(xaxis = list(title= "Customer Plot"),
+                 yaxis = list(title ='Count'))
+line
+
+```
+Row
+----------------------------------------
+
+### Count of Sales Team
+```{r}
+team <- sales_data %>% 
+  group_by(Sales.Team) %>% 
+  summarise(team = n()) %>% 
+   plot_ly(x = ~Sales.Team,
+          y= ~team,
+          color = rainbow(5),
+          type = 'bar') %>% 
+          layout(xaxis = list(title= "Customer Plot"),
+                 yaxis = list(title ='Count'))
+team
+```
+
+### Scatter Plot
+```{r}
+Sal <- plot_ly(sales_data, 
+               x = ~Sales.Team,
+               y= ~Sales,
+               text = paste("Sales.Team:", sales_data$Sales.Team,
+                            "Sales", sum(sales_data$Sales)),
+               type ="bar") %>% 
+  layout(xaxis = list(title="Sales Team"),
+         yaxis=list(title="Sales"))
+Sal
+
+```
+
+Net Sales
+=====================================
+
+Row
+--------------------------------------
+
+
+### Count of manager
+```{r}
+manager <- sales_data %>% 
+  group_by(Sales.Team.Manager) %>% 
+  summarise(ship = n()) %>% 
+   plot_ly(x = ~Sales.Team.Manager,
+          y= ~ship,
+          color = rainbow(5),
+          type = 'bar') %>% 
+          layout(xaxis = list(title= "Customer Plot"),
+                 yaxis = list(title ='Count'))
+manager
+```
+
+
+### Profit by categ
+```{r}
+Top5 <- sales_data
+Top5 <- Top5 %>% group_by(Category)
+Top5 <- Top5 %>% summarize(count = n())
+fig <- Top5 %>% plot_ly(labels = ~Category, values = ~count)
+fig <- fig %>% add_pie(hole = 0.4)
+fig <- fig %>% layout(title = "Category Plot",  showlegend = F,
+                      xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+                      yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+
+fig
+
+```
+
+Row
+--------------------------------------
+
+### Sales by Region
+```{r}
+Top5 <- sales_data
+Top5 <- Top5 %>% group_by(Region)
+Top5 <- Top5 %>% summarize(count = n())
+fig <- Top5 %>% plot_ly(labels = ~Region, values = ~count)
+fig <- fig %>% add_pie(hole = 0.4)
+fig <- fig %>% layout(title = "Category Plot",  showlegend = F,
+                      xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+                      yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+
+fig
+
+```
+
+
+### Count of Sales by Segment 
+```{r}
+Sal <- plot_ly(sales_data, 
+               x = ~Segment,
+               y= ~Profit,
+               text = paste("Segment:", sales_data$Segment,
+                            "Proft", sales_data$Profit),
+               type ="bar") %>% 
+  layout(xaxis = list(title="Segment"),
+         yaxis=list(title="Profit"))
+Sal
+```
+
+Scatter Plots
+=====================================
+
+Row
+--------------------------------------
+
+### Sales VS Profit
+
+```{r}
+# Simple Scatterplot
+attach(sales_data)
+plot(Sales, Profit, main="Sales VS Profit",
+   xlab="Sales", ylab="Profit ", pch=19)
+# Add fit lines
+abline(lm(Sales~Profit), col="red") # regression line (y~x)
+lines(lowess(Sales,Profit), col="blue") # lowess line (x,y)
+```
+
+
+### Another ScatterPlot
+```{r}
+sac <- plot_ly(sales_data, x=~Sales) %>% 
+  add_markers(y =~Profit,
+                text = ~paste("Profit:", Profit),
+              showlegend = F) %>% 
+  add_lines(y =~fitted(loess(Profit ~ Sales)),
+            name = "Profit Gained",
+            color = I("#FFC125"),
+            showlegend = T,
+            line = list(width=5)) %>% 
+  layout(xaxis =list(title="Profit"),
+         yaxis =list(title="Sales"))
+sac
+```
+
+Box Plots
+=====================================
+
+Row
+--------------------------------------
+### Box 
+```{r}
+sales_data %>% 
+  group_by(Customer.Name) %>% 
+  ggvis(~Customer.Name, ~Sales, fill =~Customer.Name) %>% 
+  layer_boxplots()
+```
+
+### State
+```{r}
+sales_data %>% 
+  group_by(State) %>% 
+  ggvis(~State, ~Sales, fill =~State) %>% 
+  layer_boxplots()
+```
+
+Data table
+=====================================
+
+Row
+--------------------------------------
+### Heatmap
+```{r}
+datatable(sales_data,
+          caption = "Sales Data",
+          rownames = T,
+          filter = "top",
+          options = list(pagelength = 10))
+
+```
+
+Bar Plots
+=====================================
+
+Row
+--------------------------------------
+### Gr
+```{r}
+ggplot(data = sales_data) +
+geom_bar(mapping = aes(x = Segment, color = Segment))
+ggplot(data = sales_data) +
+geom_bar(mapping = aes(x = Segment, fill = Segment))
+
+
+```
+#### View Data
+```{r}
+Sale_Rep <-sales_data %>% 
+  select(Segment, Sales) %>% 
+  group_by(Sales)
+```
+### Month
+```{r}
+lineplot <- as.data.frame(sales_data)
+lineplot$Sales <- factor(lineplot$Segment, levels = c("Segment", "Ship.Mode"),
+                         labels = c("Segment", "Segment", "Sales" & "Sales"))
+p1 <- ggplot() + geom_line(aes(y=Sales, x = Order.Date, colour= Segment), 
+                           size=1.5,
+                           data = lineplot, stat = "identity") +
+  theme(legend.position = "bottom", legend.direction = "horizontal", legend.title = element_blank())
+p1
+
+
+view(lineplot)
+```
+
+All Plots
+=====================================
+
+Row
+--------------------------------------
+### Plots
+```{r}
+ggplot(data = sales_data) +
+  geom_point(mapping = aes(x= Ship.Mode, y=Sales, color = Segment))
+```
+
+### more plot
+```{r}
+ggplot(data = sales_data) +
+geom_smooth(mapping = aes(x = Profit, y = Sales))
+ggplot(data = sales_data) +
+geom_smooth(mapping = aes(x = Profit, y = Sales, group = Segment))
+ggplot(data = sales_data) +
+geom_smooth(
+mapping = aes(x = Ship.Mode, y = Profit, color = Segment),
+show.legend = FALSE
+)
+```
+###
+```{r}
+ggplot(data = sales_data) +
+geom_bar(
+mapping = aes(x = Ship.Mode, fill = Segment),
+position = "dodge"
+)
+```
+
+### Keep Plotting
+```{r}
+bar <- ggplot(data = sales_data) +
+geom_bar(
+mapping = aes(x = Sales.Team.Manager, fill = Sales.Team.Manager),
+show.legend = FALSE,
+width = 1
+) +
+theme(aspect.ratio = 1) +
+labs(x = NULL, y = NULL)
+bar + coord_flip()
+bar + coord_polar()
+```
+
+
+
+
+
+
+
+
+
